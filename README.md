@@ -2,7 +2,9 @@
 # Rethinking Few-Shot Medical Segmentation: A Vector Quantization View
 This study reformulates prototype learning in few-shot medical image segmentation as a vector quantization problem, and proposes a three-stage mechanism: Grid Feature Vector Quantization (GFVQ) for prototype generation via grid average pooling, Self-Organizing Vector Quantization (SOVQ) for self-organizing clustering and local mapping, and Residual Offset Vector Quantization (ROVQ) for residual fine-tuning of prototypes during inference.  
 Problems:  
-It does not explicitly address the problems of hard negatives and feature inseparability in the foreground feature space.
+It does not explicitly address the problems of hard negatives and feature inseparability in the foreground feature space.  
+S. Huang, T. Xu, N. Shen, F. Mu and J. Li, "Rethinking Few-Shot Medical Segmentation: A Vector Quantization View," 2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), Vancouver, BC, Canada, 2023, pp. 3072-3081, doi: 10.1109/CVPR52729.2023.00300. keywords: {Training;Extraterrestrial phenomena;Vector quantization;Magnetic resonance imaging;Prototypes;Feature extraction;Pattern recognition;Medical and biological vision;cell microscopy},
+
 
 
 # Method 1 (Evaluate Now)

@@ -21,4 +21,4 @@ I. Appearance encoding:
 
 ```math
 \min_{D_1,\{\mathbf{w}_{1,i}\}}
-\sum_i \|x_i - D_1 \mathbf{w}_{1,i}\|_2^2 + \lambda_1 \|\mathbf{w}_{1,i}\|_1
+\sum_i \|vec{x}_i - D_1 \mathbf{w}_{1,i}\|_2^2 + \lambda_1 \|\mathbf{w}_{1,i}\|_1

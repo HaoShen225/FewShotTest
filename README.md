@@ -7,7 +7,7 @@ S. Huang, T. Xu, N. Shen, F. Mu and J. Li, "Rethinking Few-Shot Medical Segmenta
 # PANet: Few-Shot Image Semantic Segmentation with Prototype Alignment
 
 
-
+''' md
 # Method 1 (Evaluate Now)
 Few-shot segmentation (FSS) paradigm method: use one DINOv2 encoder fine-tuned on other dataset (ACDC/AMOS) with self-supervised training to encode the
 SPIDER bone MRI set. Identify the possible foreground by compairing the semantical similarity between query set feature and foreground feature.
@@ -18,11 +18,11 @@ Possible challenges: domain shift, uncontinuous prediction mask, optimal transmi
 # Method 2 (Under Experiment)
 Dictionary-learning-based sparse encoding: Use 2 layers of dictionaries to encode the input image in two abstract degrees, appearance encoding and structural encoding. Finally, foreground/background decision is made on the structural sparce code. The encoding process can be represented as followed:  
 I. Appearance encoding: 
-
+'''
 ```math
 \min_{D_1,\{\mathbf{w}_{1,i}\}}
 \sum_i \|\mathbf{x}_i - \mathbf{D}_1 \mathbf{w}_{1,i}\|_2^2 + \lambda_1 \|\mathbf{w}_{1,i}\|_1
-
+```
 ```md
 This step aims to learn a dictionary used to encode the local patch appearance into sparce coding. We expect that each kind of appearance can be represented by a sparce code. The first term is the reconstruction error, which enforces the dictionary, $D_{1}$, to learn the patterns on the image, and the second term enforces the dictionary to represent each appearance sparsely.
 

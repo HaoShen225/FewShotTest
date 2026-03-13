@@ -16,4 +16,8 @@ Replicate this: L. Ayzenberg, R. Giryes and H. Greenspan, "DINOv2 Based Self Sup
 Possible challenges: domain shift, uncontinuous prediction mask, optimal transmission with spatial constraint.
 
 # Method 2 (Under Experiment)
-Dictionary-learning-based sparse encoding: Use 2 layers of dictionaries to encode the input image in two abstract degrees, appearance encoding and structural encoding. Finally, foreground/background decision is made on the structural sparce code. 
+Dictionary-learning-based sparse encoding: Use 2 layers of dictionaries to encode the input image in two abstract degrees, appearance encoding and structural encoding. Finally, foreground/background decision is made on the structural sparce code. The encoding process can be represented as followed:  
+I. Appearance encoding:  
+$$
+\bm{D}_{1}, 
+$$

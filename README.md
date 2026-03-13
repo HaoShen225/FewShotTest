@@ -34,6 +34,6 @@ This step aims to learn a dictionary used to encode the structures into sparce c
 
 ```math
 \min_{D_2,\{\mathbf{w}_{2,j}\}}
-\sum_j \|\tilde{\mathbf{w}}_{1,j} - \mathbf{D}_2 \mathbf{w}_{2,j}\|_2^2 + \lambda_1 \|\mathbf{w}_{2,j}\|_1
+\sum_j \|\tilde{\mathbf{w}}_{1,j} - \mathbf{D}_2 \mathbf{w}_{2,j}\|_2^2 + \lambda_1 \|\mathbf{w}_{2,j}\|_1 + \mu crossEntropy(y_{j}-\mathbf{d}\mathbf{w}_{2,j})
 ```
 

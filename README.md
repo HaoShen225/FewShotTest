@@ -30,9 +30,10 @@ II. Structural Ensambling
 This step aims to represent structure information with the sparec code combination from the first step. Assume that the $j^{th}$ sensing field is $\\{(x_{j},y_{j})|x\in \Omega_{x,j},y\in \Omega_{y,j}\\}$, the local scructure code is $\tilde{\mathbf{w}}_{1,j}=[\mathbf{w}_{1,j}]$ (stack all the sparce code in the field).  
 
 III. Structural Encoding  
-This step aims to learn a dictionary used to encode the structures into sparce coding. We expect to represent each special structure in human body into a sparce vector. This code enables structural-level segmentation.  
+This step aims to learn a dictionary used to encode the structures into sparce coding. We expect to represent each special structure in human body into a sparce vector. This code enables structural-level segmentation. We expect the sparce code to be discriminative, so a linear segmentation head is added.
 
 ```math
 \min_{D_2,\{\mathbf{w}_{2,j}\}}
 \sum_j \|\tilde{\mathbf{w}}_{1,j} - \mathbf{D}_2 \mathbf{w}_{2,j}\|_2^2 + \lambda_1 \|\mathbf{w}_{2,j}\|_1
 ```
+

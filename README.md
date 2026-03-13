@@ -22,3 +22,10 @@ I. Appearance encoding:
 ```math
 \min_{D_1,\{\mathbf{w}_{1,i}\}}
 \sum_i \|\mathbf{x}_i - \mathbf{D}_1 \mathbf{w}_{1,i}\|_2^2 + \lambda_1 \|\mathbf{w}_{1,i}\|_1
+
+```md
+This step aims to learn a dictionary used to encode the local patch appearance into sparce coding. We expect that each kind of appearance can be represented by a sparce code. The first term is the reconstruction error, which enforces the dictionary, $D_{1}$, to learn the patterns on the image, and the second term enforces the dictionary to represent each appearance sparsely.
+
+II. Structural Ensambling
+This 
+

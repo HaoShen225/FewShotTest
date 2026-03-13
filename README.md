@@ -19,5 +19,5 @@ Possible challenges: domain shift, uncontinuous prediction mask, optimal transmi
 Dictionary-learning-based sparse encoding: Use 2 layers of dictionaries to encode the input image in two abstract degrees, appearance encoding and structural encoding. Finally, foreground/background decision is made on the structural sparce code. The encoding process can be represented as followed:  
 I. Appearance encoding:  
 $$
-\bm{D}_{1}, 
+D_{1}, \vec{w}_{1,i} = 
 $$

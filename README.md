@@ -6,7 +6,7 @@ It does not explicitly address the problems of hard negatives and feature insepa
 
 # PANet: Few-Shot Image Semantic Segmentation with Prototype Alignment
 
-# Method 1 (Evaluate Now) (This method doesn't fulfill the task assumption: train the model from the begining with few shots, no transferable parameters.)
+# Method 1 (Evaluate Now) (This method doesn't fulfill the task assumption: train the model from the begining with few shots, no transferable parameters. But it can be introduced as a benchmark)
 Few-shot segmentation (FSS) paradigm method: use one DINOv2 encoder fine-tuned on other dataset (ACDC/AMOS) with self-supervised training to encode the
 SPIDER bone MRI set. Identify the possible foreground by compairing the semantical similarity between query set feature and foreground feature.
 

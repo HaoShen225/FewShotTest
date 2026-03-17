@@ -38,3 +38,4 @@ This step aims to learn a dictionary used to encode the structures into sparce c
 ```
 
 # Task: Train a model from beginning with a few shots (not necessarily 5, can be 5-20), avoid over-fitting and domain collapse.
+Data cleaning code: SPIDER_Data_Cleaning_and_Preprocessor.py

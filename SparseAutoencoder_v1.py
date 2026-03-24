@@ -22,20 +22,27 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import datasets
 from torchvision.transforms import functional as TF
 from torchvision.transforms import InterpolationMode
+
+from dataclasses import dataclass
+from typing import List, Tuple, Dict
+from collections import defaultdict
 # 改动：
 # 1. 训练集测试集都带有相同干扰
 # 2. 删除重建头，专注学习判别性原子
 # 3. 进行bottle-neck sparse, all-layer full-sparse和no sparse消融实验
+# 4. 进行域漂移+过拟合双重抵抗实验
 # 实验结果分析
-# 稀疏确实生效了，而且 full_sparse 生效最强。只对bottle-neck加 soft L1 稀疏，不是好方案。
-# 当前版本问题：
-#
+# I. z_only_sparse 是当前最稳的配置,在存在强域偏移时效果远强于full sparse和no sparse,
+# 说明只在 bottleneck 上加稀疏，是最有效的抗 shift 方案。
+# II. full sparse可以将sparse压到最低，但是可能压倒有效特征。存在明显的训练不稳定现象，导致多 seed 平均性能下降（如csv文件所示，部分随机数下Dice归零）。
 # =========================================================
 # Config
 # =========================================================
 @dataclass
 class Cfg:
     seed: int = 0
+    seeds: Tuple[int, ...] = (0, 1, 2, 3, 4)
+
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     # image sizes
@@ -48,20 +55,6 @@ class Cfg:
     # dataset sizes
     n_train: int = 5
     n_test: int = 100
-
-    # train/test distractors
-    n_distractors_train: int = 2
-    n_distractors_test: int = 2
-
-    # perturbations (both train and test, weaker than current)
-    angle_max: float = 6.0
-    scale_min: float = 0.90
-    scale_max: float = 1.10
-    translate_ratio: float = 0.04
-    brightness_max: float = 0.12
-    contrast_min: float = 0.80
-    contrast_max: float = 1.25
-    noise_std: float = 0.3
 
     # model
     latent_ch: int = 64
@@ -80,7 +73,7 @@ class Cfg:
     lambda_sparse_enc1: float = 1e-4
     lambda_sparse_enc2: float = 5e-4
 
-    # 解码器低秩
+    # low-rank
     lambda_lowrank_dec3: float = 0.0
     lambda_lowrank_dec2: float = 0.0
     lambda_lowrank_feat: float = 0.0
@@ -92,11 +85,12 @@ class Cfg:
     bottleneck_zero_thr: float = 1e-3
 
     # outputs
-    out_dir: str = "mnist_domain_shift_sparse_ae_out_v1"
+    out_dir: str = "mnist_domain_shift_sparse_ae_out_v1/mnist_shift_sparsity_multiseed"
     save_vis_n: int = 12
 
 
 cfg = Cfg()
+print(cfg)
 
 @dataclass(frozen=True)
 class AblationSetting:
@@ -105,6 +99,24 @@ class AblationSetting:
     lambda_sparse_enc1: float
     lambda_sparse_enc2: float
 
+@dataclass(frozen=True)
+class PerturbSetting:
+    n_distractors: int
+    angle_max: float
+    scale_min: float
+    scale_max: float
+    translate_ratio: float
+    brightness_max: float
+    contrast_min: float
+    contrast_max: float
+    noise_std: float
+
+
+@dataclass(frozen=True)
+class ShiftSetting:
+    name: str
+    train: PerturbSetting
+    test: PerturbSetting
 
 def get_ablation_settings() -> List[AblationSetting]:
     return [
@@ -128,6 +140,79 @@ def get_ablation_settings() -> List[AblationSetting]:
         ),
     ]
 
+def get_shift_settings() -> List[ShiftSetting]:
+    # 固定训练域：轻度扰动
+    train_ref = PerturbSetting(
+        n_distractors=2,
+        angle_max=4.0,
+        scale_min=0.95,
+        scale_max=1.05,
+        translate_ratio=0.02,
+        brightness_max=0.05,
+        contrast_min=0.90,
+        contrast_max=1.10,
+        noise_std=0.05,
+    )
+
+    return [
+        # 0-gap：训练测试完全一致
+        ShiftSetting(
+            name="shift_0_none",
+            train=train_ref,
+            test=train_ref,
+        ),
+
+        # 轻微 gap：test 略强
+        ShiftSetting(
+            name="shift_1_mild",
+            train=train_ref,
+            test=PerturbSetting(
+                n_distractors=2,
+                angle_max=6.0,
+                scale_min=0.93,
+                scale_max=1.07,
+                translate_ratio=0.03,
+                brightness_max=0.08,
+                contrast_min=0.88,
+                contrast_max=1.12,
+                noise_std=0.10,
+            ),
+        ),
+
+        # 中等 gap
+        ShiftSetting(
+            name="shift_2_medium",
+            train=train_ref,
+            test=PerturbSetting(
+                n_distractors=3,
+                angle_max=8.0,
+                scale_min=0.90,
+                scale_max=1.10,
+                translate_ratio=0.04,
+                brightness_max=0.12,
+                contrast_min=0.85,
+                contrast_max=1.18,
+                noise_std=0.20,
+            ),
+        ),
+
+        # 强 gap
+        ShiftSetting(
+            name="shift_3_strong",
+            train=train_ref,
+            test=PerturbSetting(
+                n_distractors=4,
+                angle_max=10.0,
+                scale_min=0.88,
+                scale_max=1.12,
+                translate_ratio=0.05,
+                brightness_max=0.15,
+                contrast_min=0.80,
+                contrast_max=1.25,
+                noise_std=0.30,
+            ),
+        ),
+    ]
 
 # =========================================================
 # Utils
@@ -141,6 +226,9 @@ def set_seed(seed: int):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def iou_and_dice(pred: np.ndarray, gt: np.ndarray) -> Tuple[float, float]:
@@ -211,12 +299,11 @@ def overlay_digit_max(comp: np.ndarray, digit_img: np.ndarray, top: int, left: i
     )
 
 
-def make_synth_sample(mi: MnistIndex, is_train: bool) -> Tuple[np.ndarray, np.ndarray, Dict]:
-    """
-    设定2：
-      - train: 干净大8，无干扰数字
-      - test : 大8 + 仿射/亮度/对比度/噪声 + 随机位置干扰数字
-    """
+def make_synth_sample(
+    mi: MnistIndex,
+    perturb: PerturbSetting,
+    split_name: str,
+) -> Tuple[np.ndarray, np.ndarray, Dict]:
     img8 = mi.sample(8)
     base = np.array(
         img8.resize((cfg.out_size, cfg.out_size), resample=Image.BILINEAR),
@@ -225,7 +312,7 @@ def make_synth_sample(mi: MnistIndex, is_train: bool) -> Tuple[np.ndarray, np.nd
     mask = (base > cfg.thr_bin).astype(np.uint8)
 
     meta: Dict = {
-        "is_train": is_train,
+        "split": split_name,
         "angle": 0.0,
         "scale": 1.0,
         "translate_y": 0,
@@ -234,15 +321,16 @@ def make_synth_sample(mi: MnistIndex, is_train: bool) -> Tuple[np.ndarray, np.nd
         "contrast": 1.0,
         "pasted_digits": [],
         "distractor_boxes": [],
+        "n_distractors": perturb.n_distractors,
+        "noise_std": perturb.noise_std,
     }
 
-    # train/test 都做同类扰动，只是当前配置已经整体减弱
     x = torch.from_numpy(base)[None, None, ...]
     m = torch.from_numpy(mask.astype(np.float32))[None, None, ...]
 
-    angle = random.uniform(-cfg.angle_max, cfg.angle_max)
-    scale = random.uniform(cfg.scale_min, cfg.scale_max)
-    max_t = int(cfg.translate_ratio * cfg.out_size)
+    angle = random.uniform(-perturb.angle_max, perturb.angle_max)
+    scale = random.uniform(perturb.scale_min, perturb.scale_max)
+    max_t = int(perturb.translate_ratio * cfg.out_size)
     translate = (
         random.randint(-max_t, max_t),  # x
         random.randint(-max_t, max_t),  # y
@@ -270,10 +358,9 @@ def make_synth_sample(mi: MnistIndex, is_train: bool) -> Tuple[np.ndarray, np.nd
     base = x2[0, 0].clamp(0, 1).numpy().astype(np.float32)
     mask = (m2[0, 0].numpy() > 0.5).astype(np.uint8)
 
-    contrast = random.uniform(cfg.contrast_min, cfg.contrast_max)
-    brightness = random.uniform(-cfg.brightness_max, cfg.brightness_max)
-    noise = np.random.randn(cfg.out_size, cfg.out_size).astype(np.float32) * cfg.noise_std
-
+    contrast = random.uniform(perturb.contrast_min, perturb.contrast_max)
+    brightness = random.uniform(-perturb.brightness_max, perturb.brightness_max)
+    noise = np.random.randn(cfg.out_size, cfg.out_size).astype(np.float32) * perturb.noise_std
     base = np.clip(base * contrast + brightness + noise, 0.0, 1.0)
 
     meta["angle"] = float(angle)
@@ -285,16 +372,7 @@ def make_synth_sample(mi: MnistIndex, is_train: bool) -> Tuple[np.ndarray, np.nd
 
     comp = base.copy()
 
-    corners = [
-        (0, 0),
-        (0, cfg.out_size - cfg.digit_size),
-        (cfg.out_size - cfg.digit_size, 0),
-        (cfg.out_size - cfg.digit_size, cfg.out_size - cfg.digit_size),
-    ]
-
-    n_distractors = cfg.n_distractors_train if is_train else cfg.n_distractors_test
-
-    for k in range(n_distractors):
+    for _ in range(perturb.n_distractors):
         d = random.choice([i for i in range(10) if i != 8])
         od = mi.sample(d)
         o = pil_to_f32(od)
@@ -316,8 +394,8 @@ def make_synth_sample(mi: MnistIndex, is_train: bool) -> Tuple[np.ndarray, np.nd
 
 
 class DomainShiftSynthDataset(Dataset):
-    def __init__(self, mi: MnistIndex, n: int, is_train: bool):
-        self.items = [make_synth_sample(mi, is_train=is_train) for _ in range(n)]
+    def __init__(self, mi: MnistIndex, n: int, perturb: PerturbSetting, split_name: str):
+        self.items = [make_synth_sample(mi, perturb=perturb, split_name=split_name) for _ in range(n)]
 
     def __len__(self):
         return len(self.items)
@@ -710,123 +788,205 @@ def save_train_curve(history: List[Dict[str, float]], out_path: str):
     plt.savefig(out_path, dpi=150)
     plt.close()
 
+def save_grouped_results(raw_rows: List[Dict], out_path: str):
+    grouped = defaultdict(list)
+
+    for r in raw_rows:
+        key = (r["shift_name"], r["experiment"])
+        grouped[key].append(r)
+
+    summary_rows = []
+    for (shift_name, experiment), rows in grouped.items():
+        mean_iou = np.array([r["mean_iou"] for r in rows], dtype=np.float32)
+        mean_dice = np.array([r["mean_dice"] for r in rows], dtype=np.float32)
+        mean_z_abs = np.array([r["mean_z_abs"] for r in rows], dtype=np.float32)
+        mean_z_zero_ratio = np.array([r["mean_z_zero_ratio"] for r in rows], dtype=np.float32)
+
+        summary_rows.append({
+            "shift_name": shift_name,
+            "experiment": experiment,
+            "n_seeds": len(rows),
+            "mean_iou_mean": float(mean_iou.mean()),
+            "mean_iou_std": float(mean_iou.std()),
+            "mean_dice_mean": float(mean_dice.mean()),
+            "mean_dice_std": float(mean_dice.std()),
+            "mean_z_abs_mean": float(mean_z_abs.mean()),
+            "mean_z_abs_std": float(mean_z_abs.std()),
+            "mean_z_zero_ratio_mean": float(mean_z_zero_ratio.mean()),
+            "mean_z_zero_ratio_std": float(mean_z_zero_ratio.std()),
+        })
+
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "shift_name",
+                "experiment",
+                "n_seeds",
+                "mean_iou_mean",
+                "mean_iou_std",
+                "mean_dice_mean",
+                "mean_dice_std",
+                "mean_z_abs_mean",
+                "mean_z_abs_std",
+                "mean_z_zero_ratio_mean",
+                "mean_z_zero_ratio_std",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(summary_rows)
 
 # =========================================================
 # Main
 # =========================================================
 def main():
-    set_seed(cfg.seed)
     ensure_dir(cfg.out_dir)
-
     device = torch.device(cfg.device)
 
     mnist = datasets.MNIST(root="./mnist_data", train=True, download=True)
     mi = MnistIndex(mnist)
 
-    # 固定一份 train/test 数据，所有实验共用，避免数据采样差异污染消融
-    train_set = DomainShiftSynthDataset(mi, n=cfg.n_train, is_train=True)
-    test_set = DomainShiftSynthDataset(mi, n=cfg.n_test, is_train=False)
-
-    # 训练样本预览只保存一次
-    preview_dir = os.path.join(cfg.out_dir, "train_preview")
-    ensure_dir(preview_dir)
-    for i in range(len(train_set)):
-        img_t, gt_t, meta = train_set[i]
-        img = img_t.squeeze(0).numpy()
-        gt = gt_t.squeeze(0).numpy()
-        plt.figure(figsize=(6, 3))
-        plt.subplot(1, 2, 1)
-        plt.imshow(img, cmap="gray", vmin=0, vmax=1)
-        plt.title("Train image")
-        plt.axis("off")
-        plt.subplot(1, 2, 2)
-        plt.imshow(gt, cmap="gray", vmin=0, vmax=1)
-        plt.title("Train mask")
-        plt.axis("off")
-        plt.tight_layout()
-        plt.savefig(os.path.join(preview_dir, f"train_{i:02d}.png"), dpi=150)
-        plt.close()
-
     ablation_settings = get_ablation_settings()
-    ablation_rows = []
+    shift_settings = get_shift_settings()
 
-    for setting in ablation_settings:
-        exp_dir = os.path.join(cfg.out_dir, setting.name)
-        ensure_dir(exp_dir)
+    raw_rows = []
 
-        # 为了保证各实验初始化一致，每次重新设 seed
-        set_seed(cfg.seed)
+    for seed in cfg.seeds:
+        print("#" * 100)
+        print(f"Seed = {seed}")
+        print("#" * 100)
 
-        train_loader = DataLoader(
-            train_set,
-            batch_size=min(cfg.batch_size, len(train_set)),
-            shuffle=False,
-            num_workers=0,
-            drop_last=False,
-        )
+        for shift in shift_settings:
+            shift_dir = os.path.join(cfg.out_dir, f"seed_{seed}", shift.name)
+            ensure_dir(shift_dir)
 
-        model = SparseAENet(base_ch=cfg.base_ch, latent_ch=cfg.latent_ch).to(device)
-        optimizer = torch.optim.AdamW(
-            model.parameters(),
-            lr=cfg.lr,
-            weight_decay=cfg.weight_decay,
-        )
+            # 固定该 seed 下的 train/test 数据，三个 sparsity 配置共用
+            set_seed(seed)
+            train_set = DomainShiftSynthDataset(
+                mi, n=cfg.n_train, perturb=shift.train, split_name="train"
+            )
+            test_set = DomainShiftSynthDataset(
+                mi, n=cfg.n_test, perturb=shift.test, split_name="test"
+            )
 
-        print("=" * 80)
-        print(f"Running ablation: {setting.name}")
-        print(f"device              = {cfg.device}")
-        print(f"train samples       = {cfg.n_train}")
-        print(f"test samples        = {cfg.n_test}")
-        print(f"epochs              = {cfg.epochs}")
-        print(f"digit_size          = {cfg.digit_size}")
-        print(f"noise_std           = {cfg.noise_std}")
-        print(f"angle_max           = {cfg.angle_max}")
-        print(f"scale_range         = [{cfg.scale_min}, {cfg.scale_max}]")
-        print(f"n_distractors train = {cfg.n_distractors_train}")
-        print(f"n_distractors test  = {cfg.n_distractors_test}")
-        print(f"lambda_sparse_z     = {setting.lambda_sparse_z}")
-        print(f"lambda_sparse_enc1  = {setting.lambda_sparse_enc1}")
-        print(f"lambda_sparse_enc2  = {setting.lambda_sparse_enc2}")
-        print("=" * 80)
+            # 保存该 shift 下的 train preview
+            preview_dir = os.path.join(shift_dir, "train_preview")
+            ensure_dir(preview_dir)
+            for i in range(len(train_set)):
+                img_t, gt_t, meta = train_set[i]
+                img = img_t.squeeze(0).numpy()
+                gt = gt_t.squeeze(0).numpy()
+                plt.figure(figsize=(6, 3))
+                plt.subplot(1, 2, 1)
+                plt.imshow(img, cmap="gray", vmin=0, vmax=1)
+                plt.title("Train image")
+                plt.axis("off")
+                plt.subplot(1, 2, 2)
+                plt.imshow(gt, cmap="gray", vmin=0, vmax=1)
+                plt.title("Train mask")
+                plt.axis("off")
+                plt.tight_layout()
+                plt.savefig(os.path.join(preview_dir, f"train_{i:02d}.png"), dpi=150)
+                plt.close()
 
-        history: List[Dict[str, float]] = []
+            print("=" * 100)
+            print(f"Shift setting: {shift.name}")
+            print(f"Train domain: distractors={shift.train.n_distractors}, "
+                  f"angle={shift.train.angle_max}, noise={shift.train.noise_std}")
+            print(f"Test  domain: distractors={shift.test.n_distractors}, "
+                  f"angle={shift.test.angle_max}, noise={shift.test.noise_std}")
+            print("=" * 100)
 
-        for epoch in range(cfg.epochs):
-            stats = train_one_epoch(model, train_loader, optimizer, device, setting)
-            history.append(stats)
+            for setting in ablation_settings:
+                exp_dir = os.path.join(shift_dir, setting.name)
+                ensure_dir(exp_dir)
 
-            if epoch == 0 or (epoch + 1) % 10 == 0 or epoch == cfg.epochs - 1:
-                print(
-                    f"[{setting.name}] "
-                    f"[Epoch {epoch + 1:03d}/{cfg.epochs}] "
-                    f"loss={stats['loss']:.4f} "
-                    f"bce={stats['bce']:.4f} "
-                    f"dice={stats['dice']:.4f} "
-                    f"sparse={stats['sparse']:.4f} "
-                    f"lowrank={stats['lowrank']:.4f}"
+                # 保证每个 sparsity 配置在相同 seed 下有相同初始化
+                set_seed(seed)
+
+                train_loader = DataLoader(
+                    train_set,
+                    batch_size=min(cfg.batch_size, len(train_set)),
+                    shuffle=False,
+                    num_workers=0,
+                    drop_last=False,
                 )
 
-        save_train_curve(history, os.path.join(exp_dir, "train_curve.png"))
+                model = SparseAENet(base_ch=cfg.base_ch, latent_ch=cfg.latent_ch).to(device)
+                optimizer = torch.optim.AdamW(
+                    model.parameters(),
+                    lr=cfg.lr,
+                    weight_decay=cfg.weight_decay,
+                )
 
-        result = evaluate_one_setting(
-            model=model,
-            test_set=test_set,
-            device=device,
-            exp_dir=exp_dir,
-            setting=setting,
-        )
-        ablation_rows.append(result)
+                print("-" * 100)
+                print(f"Running: seed={seed}, shift={shift.name}, exp={setting.name}")
+                print(f"lambda_sparse_z    = {setting.lambda_sparse_z}")
+                print(f"lambda_sparse_enc1 = {setting.lambda_sparse_enc1}")
+                print(f"lambda_sparse_enc2 = {setting.lambda_sparse_enc2}")
+                print("-" * 100)
 
-    # 汇总消融结果
-    ablation_csv = os.path.join(cfg.out_dir, "ablation_summary.csv")
-    with open(ablation_csv, "w", newline="", encoding="utf-8") as f:
+                history: List[Dict[str, float]] = []
+
+                for epoch in range(cfg.epochs):
+                    stats = train_one_epoch(model, train_loader, optimizer, device, setting)
+                    history.append(stats)
+
+                    if epoch == 0 or (epoch + 1) % 10 == 0 or epoch == cfg.epochs - 1:
+                        print(
+                            f"[seed={seed}] [shift={shift.name}] [{setting.name}] "
+                            f"[Epoch {epoch + 1:03d}/{cfg.epochs}] "
+                            f"loss={stats['loss']:.4f} "
+                            f"bce={stats['bce']:.4f} "
+                            f"dice={stats['dice']:.4f} "
+                            f"sparse={stats['sparse']:.8e} "
+                            f"|z|={stats['sparse_z_raw']:.6f} "
+                            f"|f1|={stats['sparse_f1_raw']:.6f} "
+                            f"|f2|={stats['sparse_f2_raw']:.6f}"
+                        )
+
+                save_train_curve(history, os.path.join(exp_dir, "train_curve.png"))
+
+                result = evaluate_one_setting(
+                    model=model,
+                    test_set=test_set,
+                    device=device,
+                    exp_dir=exp_dir,
+                    setting=setting,
+                )
+
+                result.update({
+                    "seed": seed,
+                    "shift_name": shift.name,
+
+                    "train_n_distractors": shift.train.n_distractors,
+                    "train_angle_max": shift.train.angle_max,
+                    "train_noise_std": shift.train.noise_std,
+
+                    "test_n_distractors": shift.test.n_distractors,
+                    "test_angle_max": shift.test.angle_max,
+                    "test_noise_std": shift.test.noise_std,
+                })
+
+                raw_rows.append(result)
+
+    raw_csv = os.path.join(cfg.out_dir, "raw_results.csv")
+    with open(raw_csv, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
             fieldnames=[
+                "seed",
+                "shift_name",
                 "experiment",
                 "lambda_sparse_z",
                 "lambda_sparse_enc1",
                 "lambda_sparse_enc2",
+                "train_n_distractors",
+                "train_angle_max",
+                "train_noise_std",
+                "test_n_distractors",
+                "test_angle_max",
+                "test_noise_std",
                 "mean_iou",
                 "std_iou",
                 "mean_dice",
@@ -836,12 +996,16 @@ def main():
             ],
         )
         writer.writeheader()
-        writer.writerows(ablation_rows)
+        writer.writerows(raw_rows)
 
-    print("=" * 80)
-    print("Ablation finished.")
-    print(f"Saved summary to: {ablation_csv}")
-    print("=" * 80)
+    grouped_csv = os.path.join(cfg.out_dir, "grouped_results.csv")
+    save_grouped_results(raw_rows, grouped_csv)
+
+    print("=" * 100)
+    print("All experiments finished.")
+    print(f"Raw results    -> {raw_csv}")
+    print(f"Grouped result -> {grouped_csv}")
+    print("=" * 100)
 
 
 if __name__ == "__main__":

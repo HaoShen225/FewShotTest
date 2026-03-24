@@ -18,7 +18,7 @@ Conventional few-shot segmentation (FSS) paradigms typically rely on a pre-train
 ## Sparse Encoders/Models
 ### Tied Prototype Model for Few-Shot Medical Image Segmentation [5]  
 **Contributions:** I. This study reformulates the property that each sample can be represented as a sparse linear combination of other samples into a self-expressive graph construction: perform L1 sparse coding for each sample using the remaining samples, then treat the sparse coefficients as graph edge weights, thereby obtaining a graph that simultaneously possesses discriminability, sparsity, and adaptive neighborhoods. II. Calculating the similarity between graph patches solely based on current domain features avoids mismatches induced by domain shift during the computation of graph patch correlations.  
-**Problems in FS medical image tasks:** I. 
+**Problems in FS medical image tasks:** I. The L1-graph constructed from shallow-level features quantifies patch similarity relationships solely at the grayscale level. Lacking structural-level constraints, it may incorrectly associate foreground and background regions due to superficial appearance similarity. II. It lacks class conditional constraints and a hard negative mining mechanism. The original L1-graph places greater emphasis on unsupervised or weakly supervised geometric graph construction and does not specifically address the common scenario in medical segmentation where the foreground is extremely small and the background is highly heterogeneous.
 
 # References
 [1] Wang, Kaixin, et al. "Panet: Few-shot image semantic segmentation with prototype alignment." proceedings of the IEEE/CVF international conference on computer vision. 2019.  

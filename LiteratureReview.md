@@ -10,5 +10,5 @@ Conventional few-shot segmentation (FSS) paradigms typically rely on a pre-train
 **Problems in FS medical image tasks:** I. The proposed method for addressing domain shift is data augmentation, which can only mitigate three types of domain shift: affine transformation, elastic deformation, and intensity shift, but has insufficient robustness against more severe domain shifts such as cross-device mismatch and magnetic field inhomogeneity. II. The self-supervised signals are dependent on superpixels. When domain shift causes changes in contrast, noise, and boundary sharpness, superpixels may no longer stably correspond to the real anatomical structures, and the features learned from training will thus be capped by the quality upper limit of the pseudo-labels.
 
 
-[1] Wang, Kaixin, et al. "Panet: Few-shot image semantic segmentation with prototype alignment." proceedings of the IEEE/CVF international conference on computer vision. 2019.
+[1] Wang, Kaixin, et al. "Panet: Few-shot image semantic segmentation with prototype alignment." proceedings of the IEEE/CVF international conference on computer vision. 2019.  
 [2] Ouyang, Cheng, et al. "Self-supervision with superpixels: Training few-shot medical image segmentation without annotation." European conference on computer vision. Cham: Springer International Publishing, 2020.

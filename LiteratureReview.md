@@ -16,9 +16,11 @@ Conventional few-shot segmentation (FSS) paradigms typically rely on a pre-train
 **Problems in FS medical image tasks:** I. This work still fails to incorporate an explicit mechanism for cross-domain generalization. Specifically, its experiments only demonstrate the superiority of prototype modeling under in-distribution settings, but do not validate the effectiveness of the proposed architecture in real-world scenarios with domain shift. II. This work inherits the self-supervised supervoxel/superpixel pseudo-labeling paradigm originally pioneered by ADNet, retaining the core framework of its pre-training pipeline.
 
 ## Sparse Encoders/Models
+### Tied Prototype Model for Few-Shot Medical Image Segmentation [5]
 
 # References
 [1] Wang, Kaixin, et al. "Panet: Few-shot image semantic segmentation with prototype alignment." proceedings of the IEEE/CVF international conference on computer vision. 2019.  
 [2] Ouyang, Cheng, et al. "Self-supervision with superpixels: Training few-shot medical image segmentation without annotation." European conference on computer vision. Cham: Springer International Publishing, 2020.
 [3] Zheng S, Wu H, Gao Z, et al. Few-shot medical image segmentation via query transformation learning[J]. The Visual Computer, 2025, 41(9): 6439-6452.  
-[4] Kim, Hyeongji, Stine Hansen, and Michael Kampffmeyer. "Tied Prototype Model for Few-Shot Medical Image Segmentation." International Conference on Medical Image Computing and Computer-Assisted Intervention. Cham: Springer Nature Switzerland, 2025.
+[4] Kim, Hyeongji, Stine Hansen, and Michael Kampffmeyer. "Tied Prototype Model for Few-Shot Medical Image Segmentation." International Conference on Medical Image Computing and Computer-Assisted Intervention. Cham: Springer Nature Switzerland, 2025.  
+[5]  Wright, John, et al. "Sparse representation for computer vision and pattern recognition." Proceedings of the IEEE 98.6 (2010): 1031-1044.

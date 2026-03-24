@@ -9,7 +9,8 @@ Replicate this: L. Ayzenberg, R. Giryes and H. Greenspan, "DINOv2 Based Self Sup
 Challenges: domain shift, uncontinuous prediction mask, optimal transmission with spatial constraint.
 
 ## Tasks
-I. In the first stage, 
+I. In the first stage, test the idea on the subset of SPIDER dataset. In the subset, all the samples must be of the same MRI sequence (T1/T2), must be collected from the same center, they are are best collected on the same machine. This limitation minimizes the effect from domain drift, enabling us to investigate whether our method can metigate overfitting with 5-10 samples.
+
 ## Proposed Method 1
 Dictionary-learning-based sparse encoding: Use 2 layers of dictionaries to encode the input image in two abstract degrees, appearance encoding and structural encoding. Finally, foreground/background decision is made on the structural sparce code. The encoding process can be represented as followed:
 

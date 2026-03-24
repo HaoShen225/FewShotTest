@@ -17,6 +17,7 @@ Conventional few-shot segmentation (FSS) paradigms typically rely on a pre-train
 
 ## Sparse Encoders/Models
 
+# References
 [1] Wang, Kaixin, et al. "Panet: Few-shot image semantic segmentation with prototype alignment." proceedings of the IEEE/CVF international conference on computer vision. 2019.  
 [2] Ouyang, Cheng, et al. "Self-supervision with superpixels: Training few-shot medical image segmentation without annotation." European conference on computer vision. Cham: Springer International Publishing, 2020.
 [3] Zheng S, Wu H, Gao Z, et al. Few-shot medical image segmentation via query transformation learning[J]. The Visual Computer, 2025, 41(9): 6439-6452.  

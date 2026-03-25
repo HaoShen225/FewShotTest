@@ -9,7 +9,7 @@ Replicate this: L. Ayzenberg, R. Giryes and H. Greenspan, "DINOv2 Based Self Sup
 Challenges: domain shift, uncontinuous prediction mask, optimal transmission with spatial constraint.
 
 ## Tasks
-I. In the first stage, test the idea on the subset of SPIDER dataset. In the subset, all the samples must be of the same MRI sequence (T1/T2), must be collected from the same center, they are are best collected on the same machine. This limitation minimizes the effect from domain drift, enabling us to investigate whether our method can metigate overfitting with 5-10 samples.  
+I. In the first stage, test the idea on the subset of SPIDER dataset. In the subset, all the samples must be of the same MRI sequence (T1/T2), must be collected from the same center, they are are best collected on the same machine. This limitation minimizes the effect from domain drift, enabling us to investigate whether our method can metigate overfitting with 5-10 samples. The corresponding grouping code has been uploaded as 'SPIDER_Data_Cleaning_and_Preprocessor_DomainWise.py'
 II. After ensure that the overfitting problem is solved, try to exploit a mechanism that can solve the domain drift between different centers.
 
 ## Proposed Method 1

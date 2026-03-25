@@ -8,7 +8,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-
+# 运行该代码之前确保通过SPIDER_Data_Cleaning_and_Preprocessor.py得到了SPIDER_normalized文件夹。
 # =========================================================
 # Config
 # =========================================================
